@@ -3,9 +3,10 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
-  "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
-  },
+  // Temporarily disabled to avoid ghcr.io DNS issues - uncomment after Docker restart if needed
+  // "features": {
+  //   "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  // },
   "customizations": {
     "vscode": {
       "extensions": [
@@ -48,6 +49,12 @@
     }
   },
   "forwardPorts": [8080, 3000, 5432],
-  "postCreateCommand": "bash -c 'mvn -DskipTests package || true; cd frontend && npm install || true'",
-  "remoteUser": "vscode"
+  "postCreateCommand": "bash -c 'git config --global user.email \"innapolak@gmail.com\" && git config --global user.name \"ip48\" && mvn -DskipTests package || true; cd frontend && npm install || true'",
+  "remoteUser": "vscode",
+  
+  // Mount SSH keys into container
+  // Automatically finds SSH keys from host system
+  "mounts": [
+    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
+  ]
 }

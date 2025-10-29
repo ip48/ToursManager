@@ -1,0 +1,94 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Database (PostgreSQL)",
+      "type": "shell",
+      "command": "docker-compose up -d postgres",
+      "group": "none",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Stop Database",
+      "type": "shell",
+      "command": "docker-compose down",
+      "group": "none",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Spring Boot",
+      "type": "shell",
+      "command": "set -a && source .env && set +a && mvn spring-boot:run",
+      "group": "none",
+      "problemMatcher": [],
+      "isBackground": true,
+      "dependsOn": ["Start Database (PostgreSQL)"],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Run Full Stack (DB + Backend + Frontend)",
+      "dependsOn": [
+        "Start Database (PostgreSQL)",
+        "Run Spring Boot",
+        "Run Frontend (dev)"
+      ],
+      "group": "none",
+      "problemMatcher": []
+    },
+    {
+      "label": "Build (Maven)",
+      "type": "shell",
+      "command": "mvn clean package",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test (Maven)",
+      "type": "shell",
+      "command": "mvn test",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test Hello Endpoint",
+      "type": "shell",
+      "command": "curl http://localhost:8080/api/hello",
+      "group": "none",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Frontend (dev)",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "group": "none",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Install Frontend Dependencies",
+      "type": "shell",
+      "command": "npm install",
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "group": "none",
+      "problemMatcher": []
+    }
+  ]
+}
