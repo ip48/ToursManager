@@ -25,6 +25,12 @@ Use these notes to be productive quickly: which files to read, how to build/run,
 - AWS services (planned integrations - not yet implemented)
 - Dev environment: Both local Windows (Java/Maven/Node installed) and Dev Containers available
 
+**Future Mobile Strategy:**
+- Current: React web app (frontend/)
+- Planned: React Native mobile app (future phase)
+- **Important**: Design decisions should consider future code sharing between web and mobile
+- See `docs/MOBILE_STRATEGY.md` for architectural guidelines
+
 ## Big picture (what to know)
 - Backend: Spring Boot app in `src/main/java/com/innatour/toursmanager` with the main class `ToursManagerApplication`.
 - Frontend: Vite + React + TypeScript in `frontend/` (entry: `frontend/src/main.tsx`, main UI in `frontend/src/App.tsx`).
@@ -74,6 +80,7 @@ Use these notes to be productive quickly: which files to read, how to build/run,
 - Environment-driven DB config: `application.properties` uses `spring.datasource.*` and the `docker-compose.yml` sets `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, and `SPRING_DATASOURCE_PASSWORD` for the `app` service. Use these env vars when creating or running containers.
 - API prefix convention: controllers are simple and return JSON or text; new endpoints typically live under `com.innatour.toursmanager.controller`.
 - Frontend fetch pattern: an example fetch to `/api/hello` is present but commented out in `frontend/src/App.tsx` — follow that pattern for simple API calls.
+- **Mobile-ready architecture**: When creating new frontend code, separate business logic, API calls, and types from UI components. See `docs/MOBILE_STRATEGY.md` for guidelines on code that can be shared with future React Native app.
 
 ## Integration points & external dependencies
 - Local: Postgres is required by default (see `docker-compose.yml`). The README states MongoDB and AWS services are planned, but they are not yet wired into the codebase. If you add Mongo, also add Spring Data MongoDB dependency in `pom.xml`.

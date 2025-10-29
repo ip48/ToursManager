@@ -1,20 +1,98 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'import { useState, useEffect } from 'react'
 
-function App() {
+import './App.css'
+
+import GuideRegistration from './components/GuideRegistration'function App() {
+
   const [message, setMessage] = useState('')
 
-  useEffect(() => {
-    // fetch('/api/hello')
-    //   .then(res => res.text())
-    //   .then(data => setMessage(data))
-    //   .catch(() => setMessage('Hello World!'))
-    setMessage('Hello World!')
-  }, [])
+type MenuItem = 'home' | 'register-guide' | 'register-user';
 
-  return (
-    <div style={{ padding: '20px', textAlign: 'center' }}>
-      <h1>{message}</h1>
-    </div>
+  useEffect(() => {
+
+function App() {    // fetch('/api/hello')
+
+  const [activeMenu, setActiveMenu] = useState<MenuItem>('home');    //   .then(res => res.text())
+
+    //   .then(data => setMessage(data))
+
+  return (    //   .catch(() => setMessage('Hello World!'))
+
+    <>    setMessage('Hello World!')
+
+      <nav className="navbar">  }, [])
+
+        <div className="navbar-container">
+
+          <a href="#" className="navbar-brand" onClick={() => setActiveMenu('home')}>  return (
+
+            🌍 Tours Manager    <div style={{ padding: '20px', textAlign: 'center' }}>
+
+          </a>      <h1>{message}</h1>
+
+          <ul className="navbar-menu">    </div>
+
+            <li   )
+
+              className={`navbar-item ${activeMenu === 'home' ? 'active' : ''}`}}
+
+              onClick={() => setActiveMenu('home')}
+
+            >export default App
+              Home
+            </li>
+            <li 
+              className={`navbar-item ${activeMenu === 'register-guide' ? 'active' : ''}`}
+              onClick={() => setActiveMenu('register-guide')}
+            >
+              Register as Guide
+            </li>
+            <li 
+              className={`navbar-item ${activeMenu === 'register-user' ? 'active' : ''}`}
+              onClick={() => setActiveMenu('register-user')}
+            >
+              Register as User
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <main className="main-container">
+        {activeMenu === 'home' && (
+          <div className="card">
+            <div className="card-header">
+              <h1 className="card-title">Welcome to Tours Manager</h1>
+              <p className="card-subtitle">
+                Your gateway to amazing tour experiences around the world
+              </p>
+            </div>
+            <div style={{ color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+              <p style={{ marginBottom: '1rem' }}>
+                Whether you're an experienced tour guide looking to share your expertise, 
+                or a traveler seeking unforgettable adventures, you're in the right place.
+              </p>
+              <p>
+                Get started by registering using the menu above.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {activeMenu === 'register-guide' && <GuideRegistration />}
+
+        {activeMenu === 'register-user' && (
+          <div className="card">
+            <div className="card-header">
+              <h2 className="card-title">Register as a User</h2>
+              <p className="card-subtitle">Coming soon...</p>
+            </div>
+            <p style={{ color: 'var(--text-secondary)' }}>
+              User registration will be available in the next update.
+            </p>
+          </div>
+        )}
+      </main>
+    </>
   )
 }
 
