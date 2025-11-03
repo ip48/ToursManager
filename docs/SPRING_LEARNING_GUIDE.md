@@ -750,7 +750,218 @@ public class GuideService {
 
 ---
 
-## 6. Your Guide Entity - Line by Line
+## 6. JPA Relationships (Many-to-Many)
+
+### Understanding Entity Relationships
+
+Your ToursManager project demonstrates a **many-to-many** relationship between Guides and Languages.
+
+### The Business Model
+
+```
+Guide ←→ Language
+
+Example:
+- Guide "John Doe" speaks: English, Spanish, French
+- Language "Spanish" spoken by: John Doe, Jane Smith, Bob Johnson
+```
+
+### Database Structure
+
+**Before (Simple but Limited):**
+```sql
+CREATE TABLE guides (
+    id BIGSERIAL PRIMARY KEY,
+    first_name VARCHAR(50),
+    languages VARCHAR(200)  -- "en,es,fr" - hard to query!
+);
+```
+
+**After (Relational, Scalable):**
+```sql
+-- Reference table
+CREATE TABLE languages (
+    id BIGSERIAL PRIMARY KEY,
+    code VARCHAR(3) UNIQUE NOT NULL,  -- "en", "es", "fr"
+    name VARCHAR(50) NOT NULL         -- "English", "Spanish"
+);
+
+-- Entity table
+CREATE TABLE guides (
+    id BIGSERIAL PRIMARY KEY,
+    first_name VARCHAR(50),
+    -- no languages column!
+);
+
+-- Join table (many-to-many)
+CREATE TABLE guide_languages (
+    guide_id BIGINT REFERENCES guides(id),
+    language_id BIGINT REFERENCES languages(id),
+    PRIMARY KEY (guide_id, language_id)
+);
+```
+
+### JPA Implementation
+
+**Language Entity (Reference Data):**
+```java
+@Entity
+@Table(name = "languages")
+public class Language {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(nullable = false, unique = true, length = 3)
+    private String code;  // ISO 639-1: "en", "es", "fr"
+    
+    @Column(nullable = false, length = 50)
+    private String name;  // "English", "Spanish", "French"
+    
+    // Constructor, getters, setters...
+}
+```
+
+**Guide Entity (With Relationship):**
+```java
+@Entity
+@Table(name = "guides")
+public class Guide {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    private String firstName;
+    private String lastName;
+    
+    // Many-to-many relationship
+    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(
+        name = "guide_languages",                    // Join table name
+        joinColumns = @JoinColumn(name = "guide_id"),          // FK to this entity
+        inverseJoinColumns = @JoinColumn(name = "language_id") // FK to other entity
+    )
+    private Set<Language> languages = new HashSet<>();
+    
+    // Getters, setters...
+}
+```
+
+**Key Points:**
+- `Set<Language>` - Collection of Language entities (not strings!)
+- `@ManyToMany` - Defines the relationship type
+- `@JoinTable` - Specifies the join table details
+- `fetch = EAGER` - Load languages immediately with guide
+- `cascade = {PERSIST, MERGE}` - Save/update operations cascade (NOT REMOVE!)
+
+### Why Not CASCADE REMOVE?
+
+```java
+// DON'T DO THIS:
+@ManyToMany(cascade = CascadeType.ALL)  // ❌ BAD!
+private Set<Language> languages;
+
+// Problem: Deleting a guide would delete all its languages!
+guideRepository.delete(guide);
+// Would delete "English", "Spanish", "French" from database
+// All other guides speaking these languages would break!
+```
+
+**Correct approach:**
+```java
+@ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})  // ✅ GOOD
+private Set<Language> languages;
+
+// Only relationship is deleted, not the languages themselves
+guideRepository.delete(guide);
+// Deletes rows from guide_languages table
+// Languages table unchanged
+```
+
+### Using the Relationship
+
+**Create Guide with Languages:**
+```java
+// Service layer
+public Guide createGuide(Guide guide, String languageCodes) {
+    // Convert "en,es,fr" to Set<Language>
+    Set<Language> languages = convertLanguageCodesToEntities(languageCodes);
+    guide.setLanguages(languages);
+    return guideRepository.save(guide);
+}
+
+private Set<Language> convertLanguageCodesToEntities(String codes) {
+    Set<String> codeSet = Arrays.stream(codes.split(","))
+            .map(String::trim)
+            .collect(Collectors.toSet());
+    
+    // Find languages by codes
+    return languageRepository.findByCodeIn(codeSet);
+}
+```
+
+**Query Guides by Language:**
+```java
+// Repository
+@Query("SELECT DISTINCT g FROM Guide g JOIN g.languages l WHERE LOWER(l.code) = LOWER(:code)")
+List<Guide> findByLanguageCode(@Param("code") String code);
+
+// Usage
+List<Guide> spanishSpeakers = guideRepository.findByLanguageCode("es");
+```
+
+**Benefits of Relational Approach:**
+1. ✅ **Efficient queries** - Proper SQL joins instead of LIKE
+2. ✅ **Data integrity** - Invalid codes rejected at database level
+3. ✅ **Extensible** - Easy to add proficiency levels, certifications
+4. ✅ **Analytics** - Can count guides per language
+5. ✅ **Performance** - Can index language_id for fast lookups
+
+### API Compatibility with DTOs
+
+The API still uses strings for backward compatibility:
+
+```java
+// GuideDTO - Converts between entity and API format
+public class GuideDTO {
+    private String languages;  // "en,es,fr" for API
+    
+    public static GuideDTO fromEntity(Guide guide) {
+        GuideDTO dto = new GuideDTO();
+        // Convert Set<Language> → "en,es,fr"
+        String codes = guide.getLanguages().stream()
+                .map(Language::getCode)
+                .collect(Collectors.joining(","));
+        dto.setLanguages(codes);
+        return dto;
+    }
+}
+```
+
+**Frontend sees:**
+```json
+{
+  "firstName": "John",
+  "languages": "en,es,fr"
+}
+```
+
+**Backend stores:**
+```
+guides table:
+id | first_name
+1  | John
+
+guide_languages table:
+guide_id | language_id
+1        | 5  (English)
+1        | 7  (Spanish)
+1        | 3  (French)
+```
+
+---
+
+## 7. Your Guide Entity - Line by Line
 
 Let's examine every line of `Guide.java`:
 
@@ -762,6 +973,8 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity  // JPA: This is a database entity
 @Table(name = "guides")  // JPA: Table name (optional, defaults to class name)
@@ -794,9 +1007,14 @@ public class Guide {
     @Column(length = 500)
     private String profile;
     
-    @Size(max = 200, message = "Languages cannot exceed 200 characters")
-    @Column(length = 200)
-    private String languages;
+    // Many-to-many relationship with Language entity
+    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(
+        name = "guide_languages",
+        joinColumns = @JoinColumn(name = "guide_id"),
+        inverseJoinColumns = @JoinColumn(name = "language_id")
+    )
+    private Set<Language> languages = new HashSet<>();  // Collection of Language entities
     
     @Column(nullable = false)
     private Boolean active = true;  // Default value
@@ -844,7 +1062,7 @@ public class Guide {
                 ", email='" + email + '\'' +
                 ", phoneNumber='" + phoneNumber + '\'' +
                 ", profile='" + profile + '\'' +
-                ", languages='" + languages + '\'' +
+                ", languagesCount=" + (languages != null ? languages.size() : 0) +
                 ", active=" + active +
                 ", createdAt=" + createdAt +
                 ", updatedAt=" + updatedAt +
@@ -866,10 +1084,16 @@ public class Guide {
 - `@PrePersist/@PreUpdate` - No (but useful)
 - Constructor with parameters - No (but convenient)
 - `toString()` - No (but helpful for debugging)
+- `@ManyToMany` - Only if you have relationships
+
+**Note on languages field:**
+- Now a `Set<Language>` (collection of entities) instead of String
+- Demonstrates proper relational modeling
+- See section 6 "JPA Relationships" for full explanation
 
 ---
 
-## 7. Repository Layer
+## 8. Repository Layer
 
 ```java
 @Repository
