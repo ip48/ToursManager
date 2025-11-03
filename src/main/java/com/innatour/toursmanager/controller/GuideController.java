@@ -1,5 +1,6 @@
 package com.innatour.toursmanager.controller;
 
+import com.innatour.toursmanager.dto.GuideDTO;
 import com.innatour.toursmanager.model.Guide;
 import com.innatour.toursmanager.service.GuideService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,40 +33,46 @@ public class GuideController {
     @Operation(summary = "Get all guides", description = "Retrieve all guides with optional filtering by active status, name search, or language")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Successfully retrieved guides",
-                content = @Content(mediaType = "application/json", schema = @Schema(implementation = Guide.class)))
+                content = @Content(mediaType = "application/json", schema = @Schema(implementation = GuideDTO.class)))
     })
     @GetMapping
-    public ResponseEntity<List<Guide>> getAllGuides(
+    public ResponseEntity<List<GuideDTO>> getAllGuides(
             @Parameter(description = "Filter by active status") @RequestParam(required = false) Boolean active,
             @Parameter(description = "Search by first or last name") @RequestParam(required = false) String search,
-            @Parameter(description = "Filter by language spoken") @RequestParam(required = false) String language) {
+            @Parameter(description = "Filter by language code (e.g., 'en', 'es')") @RequestParam(required = false) String language) {
+        
+        List<Guide> guides;
         
         if (language != null && !language.trim().isEmpty()) {
-            return ResponseEntity.ok(guideService.searchGuidesByLanguage(language));
+            guides = guideService.searchGuidesByLanguage(language);
+        } else if (search != null && !search.trim().isEmpty()) {
+            guides = guideService.searchGuides(search);
+        } else if (active != null && active) {
+            guides = guideService.getActiveGuides();
+        } else {
+            guides = guideService.getAllGuides();
         }
         
-        if (search != null && !search.trim().isEmpty()) {
-            return ResponseEntity.ok(guideService.searchGuides(search));
-        }
+        // Convert to DTOs for API response
+        List<GuideDTO> guideDTOs = guides.stream()
+                .map(GuideDTO::fromEntity)
+                .toList();
         
-        if (active != null && active) {
-            return ResponseEntity.ok(guideService.getActiveGuides());
-        }
-        
-        return ResponseEntity.ok(guideService.getAllGuides());
+        return ResponseEntity.ok(guideDTOs);
     }
     
     // GET guide by ID
     @Operation(summary = "Get guide by ID", description = "Retrieve a specific guide by their ID")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Guide found",
-                content = @Content(mediaType = "application/json", schema = @Schema(implementation = Guide.class))),
+                content = @Content(mediaType = "application/json", schema = @Schema(implementation = GuideDTO.class))),
         @ApiResponse(responseCode = "404", description = "Guide not found", content = @Content)
     })
     @GetMapping("/{id}")
-    public ResponseEntity<Guide> getGuideById(
+    public ResponseEntity<GuideDTO> getGuideById(
             @Parameter(description = "Guide ID") @PathVariable Long id) {
         return guideService.getGuideById(id)
+                .map(GuideDTO::fromEntity)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -74,33 +81,54 @@ public class GuideController {
     @Operation(summary = "Register a new guide", description = "Create a new tour guide profile")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Guide successfully registered",
-                content = @Content(mediaType = "application/json", schema = @Schema(implementation = Guide.class))),
+                content = @Content(mediaType = "application/json", schema = @Schema(implementation = GuideDTO.class))),
         @ApiResponse(responseCode = "400", description = "Invalid input or email already exists", content = @Content)
     })
     @PostMapping
-    public ResponseEntity<Guide> createGuide(
-            @Parameter(description = "Guide details") @Valid @RequestBody Guide guide) {
-        // Validation errors are handled automatically by GlobalExceptionHandler
-        // IllegalArgumentException (e.g., duplicate email) is also handled automatically
-        Guide createdGuide = guideService.createGuide(guide);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdGuide);
+    public ResponseEntity<GuideDTO> createGuide(
+            @Parameter(description = "Guide details with comma-separated language codes") @Valid @RequestBody GuideDTO guideDTO) {
+        // Create Guide entity from DTO
+        Guide guide = new Guide();
+        guide.setFirstName(guideDTO.getFirstName());
+        guide.setLastName(guideDTO.getLastName());
+        guide.setEmail(guideDTO.getEmail());
+        guide.setPhoneNumber(guideDTO.getPhoneNumber());
+        guide.setProfile(guideDTO.getProfile());
+        guide.setActive(guideDTO.getActive() != null ? guideDTO.getActive() : true);
+        
+        // Create guide with language codes
+        Guide createdGuide = guideService.createGuide(guide, guideDTO.getLanguages());
+        
+        // Convert back to DTO for response
+        return ResponseEntity.status(HttpStatus.CREATED).body(GuideDTO.fromEntity(createdGuide));
     }
     
     // UPDATE existing guide
     @Operation(summary = "Update guide", description = "Update an existing guide's information")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Guide successfully updated",
-                content = @Content(mediaType = "application/json", schema = @Schema(implementation = Guide.class))),
+                content = @Content(mediaType = "application/json", schema = @Schema(implementation = GuideDTO.class))),
         @ApiResponse(responseCode = "400", description = "Invalid input", content = @Content),
         @ApiResponse(responseCode = "404", description = "Guide not found", content = @Content)
     })
     @PutMapping("/{id}")
-    public ResponseEntity<Guide> updateGuide(
+    public ResponseEntity<GuideDTO> updateGuide(
             @Parameter(description = "Guide ID") @PathVariable Long id, 
-            @Valid @RequestBody Guide guide) {
-        // Errors handled automatically by GlobalExceptionHandler
-        Guide updatedGuide = guideService.updateGuide(id, guide);
-        return ResponseEntity.ok(updatedGuide);
+            @Valid @RequestBody GuideDTO guideDTO) {
+        // Create Guide entity from DTO
+        Guide guide = new Guide();
+        guide.setFirstName(guideDTO.getFirstName());
+        guide.setLastName(guideDTO.getLastName());
+        guide.setEmail(guideDTO.getEmail());
+        guide.setPhoneNumber(guideDTO.getPhoneNumber());
+        guide.setProfile(guideDTO.getProfile());
+        guide.setActive(guideDTO.getActive() != null ? guideDTO.getActive() : true);
+        
+        // Update guide with language codes
+        Guide updatedGuide = guideService.updateGuide(id, guide, guideDTO.getLanguages());
+        
+        // Convert back to DTO for response
+        return ResponseEntity.ok(GuideDTO.fromEntity(updatedGuide));
     }
     
     // DELETE guide

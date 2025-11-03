@@ -1,80 +1,73 @@
-package com.innatour.toursmanager.model;
+package com.innatour.toursmanager.dto;
 
-import jakarta.persistence.*;
+import com.innatour.toursmanager.model.Guide;
+import com.innatour.toursmanager.model.Language;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
 
-@Entity
-@Table(name = "guides")
-public class Guide {
+import java.time.LocalDateTime;
+import java.util.stream.Collectors;
+
+/**
+ * Data Transfer Object for Guide entity
+ * Converts between entity (with Language objects) and API format (with language code strings)
+ */
+public class GuideDTO {
     
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
     @NotBlank(message = "First name is required")
     @Size(min = 2, max = 50, message = "First name must be between 2 and 50 characters")
-    @Column(nullable = false, length = 50)
     private String firstName;
     
     @NotBlank(message = "Last name is required")
     @Size(min = 2, max = 50, message = "Last name must be between 2 and 50 characters")
-    @Column(nullable = false, length = 50)
     private String lastName;
     
     @NotBlank(message = "Email is required")
     @Email(message = "Email must be valid")
-    @Column(nullable = false, unique = true, length = 100)
     private String email;
     
     @Size(max = 20, message = "Phone number cannot exceed 20 characters")
-    @Column(length = 20)
     private String phoneNumber;
     
     @Size(max = 500, message = "Profile cannot exceed 500 characters")
-    @Column(length = 500)
     private String profile;
     
-    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-    @JoinTable(
-        name = "guide_languages",
-        joinColumns = @JoinColumn(name = "guide_id"),
-        inverseJoinColumns = @JoinColumn(name = "language_id")
-    )
-    private Set<Language> languages = new HashSet<>();
-    
-    @Column(nullable = false)
-    private Boolean active = true;
-    
-    @Column(nullable = false, updatable = false)
+    private String languages; // Comma-separated language codes (e.g., "en,es,fr")
+    private Boolean active;
     private LocalDateTime createdAt;
-    
-    @Column(nullable = false)
     private LocalDateTime updatedAt;
     
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-    }
-    
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
-    
     // Constructors
-    public Guide() {
+    public GuideDTO() {
     }
     
-    public Guide(String firstName, String lastName, String email) {
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.email = email;
+    /**
+     * Convert Guide entity to DTO (for API responses)
+     */
+    public static GuideDTO fromEntity(Guide guide) {
+        GuideDTO dto = new GuideDTO();
+        dto.setId(guide.getId());
+        dto.setFirstName(guide.getFirstName());
+        dto.setLastName(guide.getLastName());
+        dto.setEmail(guide.getEmail());
+        dto.setPhoneNumber(guide.getPhoneNumber());
+        dto.setProfile(guide.getProfile());
+        dto.setActive(guide.getActive());
+        dto.setCreatedAt(guide.getCreatedAt());
+        dto.setUpdatedAt(guide.getUpdatedAt());
+        
+        // Convert Set<Language> to comma-separated string of codes
+        if (guide.getLanguages() != null && !guide.getLanguages().isEmpty()) {
+            String languageCodes = guide.getLanguages().stream()
+                    .map(Language::getCode)
+                    .collect(Collectors.joining(","));
+            dto.setLanguages(languageCodes);
+        }
+        
+        return dto;
     }
     
     // Getters and Setters
@@ -126,11 +119,11 @@ public class Guide {
         this.profile = profile;
     }
     
-    public Set<Language> getLanguages() {
+    public String getLanguages() {
         return languages;
     }
     
-    public void setLanguages(Set<Language> languages) {
+    public void setLanguages(String languages) {
         this.languages = languages;
     }
     
@@ -146,23 +139,15 @@ public class Guide {
         return createdAt;
     }
     
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+    
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
     
-    @Override
-    public String toString() {
-        return "Guide{" +
-                "id=" + id +
-                ", firstName='" + firstName + '\'' +
-                ", lastName='" + lastName + '\'' +
-                ", email='" + email + '\'' +
-                ", phoneNumber='" + phoneNumber + '\'' +
-                ", profile='" + profile + '\'' +
-                ", languagesCount=" + (languages != null ? languages.size() : 0) +
-                ", active=" + active +
-                ", createdAt=" + createdAt +
-                ", updatedAt=" + updatedAt +
-                '}';
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

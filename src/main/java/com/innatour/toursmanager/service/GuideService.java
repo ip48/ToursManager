@@ -1,21 +1,54 @@
 package com.innatour.toursmanager.service;
 
 import com.innatour.toursmanager.model.Guide;
+import com.innatour.toursmanager.model.Language;
 import com.innatour.toursmanager.repository.GuideRepository;
+import com.innatour.toursmanager.repository.LanguageRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
 public class GuideService {
     
     private final GuideRepository guideRepository;
+    private final LanguageRepository languageRepository;
     
-    public GuideService(GuideRepository guideRepository) {
+    public GuideService(GuideRepository guideRepository, LanguageRepository languageRepository) {
         this.guideRepository = guideRepository;
+        this.languageRepository = languageRepository;
+    }
+    
+    /**
+     * Convert comma-separated language codes to Set of Language entities
+     */
+    private Set<Language> convertLanguageCodesToEntities(String languageCodes) {
+        if (languageCodes == null || languageCodes.trim().isEmpty()) {
+            return new HashSet<>();
+        }
+        
+        Set<String> codes = Arrays.stream(languageCodes.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toSet());
+        
+        Set<Language> languages = languageRepository.findByCodeIn(codes);
+        
+        // Validate that all requested language codes exist
+        if (languages.size() != codes.size()) {
+            Set<String> foundCodes = languages.stream()
+                    .map(Language::getCode)
+                    .collect(Collectors.toSet());
+            Set<String> missingCodes = codes.stream()
+                    .filter(code -> !foundCodes.contains(code))
+                    .collect(Collectors.toSet());
+            throw new IllegalArgumentException("Invalid language codes: " + missingCodes);
+        }
+        
+        return languages;
     }
     
     public List<Guide> getAllGuides() {
@@ -39,19 +72,30 @@ public class GuideService {
                 searchTerm, searchTerm);
     }
     
-    public List<Guide> searchGuidesByLanguage(String language) {
-        return guideRepository.findByLanguagesContainingIgnoreCase(language);
+    public List<Guide> searchGuidesByLanguage(String languageCode) {
+        return guideRepository.findByLanguageCode(languageCode);
     }
     
-    public Guide createGuide(Guide guide) {
+    /**
+     * Create guide with language codes (comma-separated string)
+     */
+    public Guide createGuide(Guide guide, String languageCodes) {
         // Check if email already exists
         if (guideRepository.findByEmail(guide.getEmail()).isPresent()) {
             throw new IllegalArgumentException("Email already exists: " + guide.getEmail());
         }
+        
+        // Convert language codes to entities
+        Set<Language> languages = convertLanguageCodesToEntities(languageCodes);
+        guide.setLanguages(languages);
+        
         return guideRepository.save(guide);
     }
     
-    public Guide updateGuide(Long id, Guide guideDetails) {
+    /**
+     * Update guide with language codes (comma-separated string)
+     */
+    public Guide updateGuide(Long id, Guide guideDetails, String languageCodes) {
         Guide guide = guideRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Guide not found with id: " + id));
         
@@ -67,8 +111,11 @@ public class GuideService {
         guide.setEmail(guideDetails.getEmail());
         guide.setPhoneNumber(guideDetails.getPhoneNumber());
         guide.setProfile(guideDetails.getProfile());
-        guide.setLanguages(guideDetails.getLanguages());
         guide.setActive(guideDetails.getActive());
+        
+        // Convert and set languages
+        Set<Language> languages = convertLanguageCodesToEntities(languageCodes);
+        guide.setLanguages(languages);
         
         return guideRepository.save(guide);
     }

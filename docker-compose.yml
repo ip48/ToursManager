@@ -27,7 +27,7 @@ services:
       - POSTGRES_USER=${DB_USERNAME}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
     ports:
-      - "5433:5432"  # Map host port 5433 to container port 5432 (avoid conflict with Windows PostgreSQL on 5432)
+      - "5433:5432"  # Map host port 5433 to container port 5432 (avoid conflict with Windows PostgreSQL)
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
