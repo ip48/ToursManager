@@ -1,0 +1,19 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Debug Full Stack (F5)",
+            "request": "launch",
+            "mainClass": "com.innatour.toursmanager.ToursManagerApplication",
+            "projectName": "tours-manager",
+            "envFile": "${workspaceFolder}/.env",
+            "console": "integratedTerminal",
+            "preLaunchTask": "Start Database and Frontend",
+            "postDebugTask": "Stop All Services"
+        }
+    ]
+}

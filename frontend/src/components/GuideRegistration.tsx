@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import type { GuideFormData } from '../types/Guide';
 import { validateGuideForm } from '../utils/validation';
 import { registerGuide } from '../services/guideService';
+import { LANGUAGES, languageCodesToString } from '../constants/languages';
 
 interface FormErrors {
   [key: string]: string;
@@ -18,6 +19,7 @@ export default function GuideRegistration() {
     languages: ''
   });
 
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'success' | 'error' | null>(null);
@@ -29,6 +31,27 @@ export default function GuideRegistration() {
     // Clear error for this field when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleLanguageToggle = (languageCode: string) => {
+    setSelectedLanguages(prev => {
+      const newSelection = prev.includes(languageCode)
+        ? prev.filter(code => code !== languageCode)
+        : [...prev, languageCode];
+      
+      // Update formData.languages with comma-separated codes
+      setFormData(prevForm => ({
+        ...prevForm,
+        languages: languageCodesToString(newSelection)
+      }));
+      
+      return newSelection;
+    });
+    
+    // Clear error when user selects languages
+    if (errors.languages) {
+      setErrors(prev => ({ ...prev, languages: '' }));
     }
   };
 
@@ -62,6 +85,7 @@ export default function GuideRegistration() {
         profile: '',
         languages: ''
       });
+      setSelectedLanguages([]);
       setErrors({});
     } else {
       setSubmitStatus('error');
@@ -158,20 +182,27 @@ export default function GuideRegistration() {
         </div>
 
         <div className="form-group">
-          <label htmlFor="languages" className="form-label">
+          <label className="form-label">
             Languages
           </label>
-          <input
-            type="text"
-            id="languages"
-            name="languages"
-            className={`form-input ${errors.languages ? 'error' : ''}`}
-            value={formData.languages}
-            onChange={handleInputChange}
-            placeholder="e.g., English, Spanish, French"
-          />
+          <div className="language-selector">
+            {LANGUAGES.map(language => (
+              <button
+                key={language.code}
+                type="button"
+                className={`language-chip ${selectedLanguages.includes(language.code) ? 'selected' : ''}`}
+                onClick={() => handleLanguageToggle(language.code)}
+              >
+                {language.name}
+              </button>
+            ))}
+          </div>
+          {selectedLanguages.length > 0 && (
+            <div className="form-hint">
+              Selected: {selectedLanguages.length} language{selectedLanguages.length !== 1 ? 's' : ''}
+            </div>
+          )}
           {errors.languages && <div className="form-error">{errors.languages}</div>}
-          <div className="form-hint">Separate multiple languages with commas</div>
         </div>
 
         <div className="form-group">
@@ -213,6 +244,7 @@ export default function GuideRegistration() {
                 profile: '',
                 languages: ''
               });
+              setSelectedLanguages([]);
               setErrors({});
               setSubmitStatus(null);
             }}

@@ -3,12 +3,15 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
-  // Temporarily disabled to avoid ghcr.io DNS issues - uncomment after Docker restart if needed
-  // "features": {
-  //   "ghcr.io/devcontainers/features/docker-in-docker:2": {}
-  // },
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
   "customizations": {
     "vscode": {
+      "settings": {
+        "remote.autoForwardPorts": false,
+        "remote.restoreForwardedPorts": false
+      },
       "extensions": [
         "amazonwebservices.amazon-q-vscode",
         "amazonwebservices.aws-toolkit-vscode",
@@ -48,7 +51,18 @@
       ]
     }
   },
-  "forwardPorts": [8080, 3000, 5432],
+  "forwardPorts": [8080, 3000, 5433],
+  "portsAttributes": {
+    "5433": {
+      "label": "PostgreSQL"
+    },
+    "8080": {
+      "label": "Spring Boot Backend"
+    },
+    "3000": {
+      "label": "React Frontend"
+    }
+  },
   "postCreateCommand": "bash -c 'git config --global user.email \"innapolak@gmail.com\" && git config --global user.name \"ip48\" && mvn -DskipTests package || true; cd frontend && npm install || true'",
   "remoteUser": "vscode",
   

@@ -1,57 +1,37 @@
-import { useState } from 'react'import { useState, useEffect } from 'react'
-
+import { useState } from 'react'
 import './App.css'
-
-import GuideRegistration from './components/GuideRegistration'function App() {
-
-  const [message, setMessage] = useState('')
+import GuideRegistration from './components/GuideRegistration'
 
 type MenuItem = 'home' | 'register-guide' | 'register-user';
 
-  useEffect(() => {
+function App() {
+  const [activeMenu, setActiveMenu] = useState<MenuItem>('home');
 
-function App() {    // fetch('/api/hello')
-
-  const [activeMenu, setActiveMenu] = useState<MenuItem>('home');    //   .then(res => res.text())
-
-    //   .then(data => setMessage(data))
-
-  return (    //   .catch(() => setMessage('Hello World!'))
-
-    <>    setMessage('Hello World!')
-
-      <nav className="navbar">  }, [])
-
+  return (
+    <>
+      <nav className="navbar">
         <div className="navbar-container">
-
-          <a href="#" className="navbar-brand" onClick={() => setActiveMenu('home')}>  return (
-
-            🌍 Tours Manager    <div style={{ padding: '20px', textAlign: 'center' }}>
-
-          </a>      <h1>{message}</h1>
-
-          <ul className="navbar-menu">    </div>
-
-            <li   )
-
-              className={`navbar-item ${activeMenu === 'home' ? 'active' : ''}`}}
-
+          <a href="#" className="navbar-brand" onClick={() => setActiveMenu('home')}>
+            🌍 Tours Manager
+          </a>
+          <ul className="navbar-menu">
+            <li 
+              className={`navbar-item ${activeMenu === 'home' ? 'active' : ''}`}
               onClick={() => setActiveMenu('home')}
-
-            >export default App
-              Home
+            >
+              🏠 Home
             </li>
             <li 
               className={`navbar-item ${activeMenu === 'register-guide' ? 'active' : ''}`}
               onClick={() => setActiveMenu('register-guide')}
             >
-              Register as Guide
+              🎯 Guides
             </li>
             <li 
               className={`navbar-item ${activeMenu === 'register-user' ? 'active' : ''}`}
               onClick={() => setActiveMenu('register-user')}
             >
-              Register as User
+              👤 Users
             </li>
           </ul>
         </div>

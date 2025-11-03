@@ -232,3 +232,44 @@
   color: #991b1b;
   border: 1px solid #fca5a5;
 }
+
+/* Language Selector */
+.language-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border: 2px solid var(--border-color);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.language-chip {
+  padding: 0.5rem 1rem;
+  border: 2px solid var(--border-color);
+  background: white;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.language-chip:hover {
+  border-color: var(--primary-green);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.language-chip.selected {
+  background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-purple) 100%);
+  color: white;
+  border-color: transparent;
+}
+
+.language-chip.selected:hover {
+  opacity: 0.9;
+}
