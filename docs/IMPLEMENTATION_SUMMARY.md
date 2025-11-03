@@ -2,7 +2,55 @@
 
 ## ✅ Step-by-Step Improvements
 
-### Step 1: OpenAPI (Swagger) Documentation
+### Step 1: Language Migration to Relational Model
+**Date:** November 3, 2025
+
+**Files Created:**
+- `src/main/java/.../model/Language.java` - Language entity with ISO 639-1 codes
+- `src/main/java/.../repository/LanguageRepository.java` - Language repository with query methods
+- `src/main/java/.../dto/GuideDTO.java` - Data Transfer Object for API compatibility
+- `src/main/java/.../config/DataInitializer.java` - Seeds 25 standard languages on startup
+
+**Files Modified:**
+- `src/main/java/.../model/Guide.java` - Changed from String field to Set<Language> with @ManyToMany
+- `src/main/java/.../service/GuideService.java` - Added language code conversion logic
+- `src/main/java/.../controller/GuideController.java` - Uses DTOs to maintain API compatibility
+- `src/main/java/.../repository/GuideRepository.java` - Added efficient language search query
+
+**Database Changes:**
+- Created `languages` table (id, code, name)
+- Created `guide_languages` join table (guide_id, language_id)
+- Removed `languages` String column from `guides` table
+
+**What You Get:**
+- ✅ Efficient language filtering with SQL joins (e.g., "find all Spanish-speaking guides")
+- ✅ Data integrity (invalid language codes rejected at database level)
+- ✅ Scalable (easy to add proficiency levels, certifications later)
+- ✅ API compatibility maintained (still uses comma-separated strings like "en,es,fr")
+- ✅ 25 standard ISO 639-1 language codes pre-loaded
+
+**API Remains Unchanged:**
+```json
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "email": "john@example.com",
+  "languages": "en,es,fr"  // Still comma-separated string
+}
+```
+
+**Backend Structure:**
+```
+Guide (1) ←→ (many) guide_languages ←→ (many) Language (1)
+```
+
+**Why This Matters:**
+- Before: `WHERE languages LIKE '%es%'` (slow, unreliable)
+- After: `JOIN guide_languages gl JOIN languages l WHERE l.code = 'es'` (fast, accurate)
+
+---
+
+### Step 2: OpenAPI (Swagger) Documentation
 **Files Created/Modified:**
 - `pom.xml` - Added springdoc-openapi dependency
 - `src/main/java/.../config/OpenApiConfig.java` - API documentation configuration
@@ -18,7 +66,7 @@
 
 ---
 
-### Step 2: Standardized Error Handling
+### Step 3: Standardized Error Handling
 **Files Created:**
 - `src/main/java/.../dto/ErrorResponse.java` - Standard error format
 - `src/main/java/.../exception/GlobalExceptionHandler.java` - Catches all exceptions
@@ -142,19 +190,23 @@ Visit http://localhost:3000, click "Register as Guide", and:
 backend/
 ├── src/main/java/.../
 │   ├── config/
-│   │   └── OpenApiConfig.java          # API documentation config
+│   │   ├── OpenApiConfig.java          # API documentation config
+│   │   └── DataInitializer.java        # Seeds language data on startup
 │   ├── controller/
 │   │   └── GuideController.java        # Clean REST endpoints with docs
 │   ├── dto/
-│   │   └── ErrorResponse.java          # Standard error format
+│   │   ├── ErrorResponse.java          # Standard error format
+│   │   └── GuideDTO.java               # DTO for API compatibility
 │   ├── exception/
 │   │   └── GlobalExceptionHandler.java # Centralized error handling
 │   ├── model/
-│   │   └── Guide.java
+│   │   ├── Guide.java                  # With @ManyToMany to Language
+│   │   └── Language.java               # ISO 639-1 language codes
 │   ├── repository/
-│   │   └── GuideRepository.java
+│   │   ├── GuideRepository.java        # With efficient language queries
+│   │   └── LanguageRepository.java     # Language lookup methods
 │   └── service/
-│       └── GuideService.java
+│       └── GuideService.java           # Language code conversion logic
 
 frontend/
 ├── src/

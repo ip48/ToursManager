@@ -23,7 +23,10 @@ frontend/src/
 
 #### 1. `/types/Guide.ts`
 - TypeScript interfaces for Guide entity
-- Matches backend API response structure
+- `GuideFormData` - Form input data (base interface)
+- `Guide` - Extends GuideFormData with server metadata (id, timestamps)
+- `languages` field: comma-separated language codes (e.g., "en,es,fr")
+- Matches backend API response structure (uses GuideDTO)
 - Can be used in both React and React Native
 
 #### 2. `/services/guideService.ts`
@@ -41,6 +44,12 @@ frontend/src/
 - API endpoint URLs
 - Can be configured via environment variables
 - Single source of truth for backend URLs
+
+#### 5. `/constants/languages.ts`
+- ISO 639-1 language codes and names
+- Matches backend `Language` entity codes
+- Helper functions: `languageCodesToString()`, `stringToLanguageCodes()`, `getLanguageName()`
+- Shared between web and mobile for language selection UIs
 
 ### Component Refactoring
 
