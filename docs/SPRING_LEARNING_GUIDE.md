@@ -10,13 +10,14 @@ This guide explains every Spring concept, annotation, and architectural decision
 3. [Annotations Explained](#annotations-explained)
 4. [Architecture: Layers Explained](#architecture-layers-explained)
 5. [How Spring Works (Dependency Injection)](#how-spring-works)
-6. [Your Guide Entity - Line by Line](#guide-entity-explained)
-7. [Repository Layer](#repository-layer)
-8. [Service Layer](#service-layer)
-9. [Controller Layer](#controller-layer)
-10. [Configuration Classes](#configuration-classes)
-11. [Exception Handling](#exception-handling)
-12. [What's Required vs Optional](#whats-required-vs-optional)
+6. [JPA Relationships (Many-to-Many)](#jpa-relationships)
+7. [Your Guide Entity - Line by Line](#guide-entity-explained)
+8. [Repository Layer](#repository-layer)
+9. [Service Layer](#service-layer)
+10. [Controller Layer & DTOs](#controller-layer)
+11. [Configuration Classes](#configuration-classes)
+12. [Exception Handling](#exception-handling)
+13. [What's Required vs Optional](#whats-required-vs-optional)
 
 ---
 
@@ -26,18 +27,22 @@ This guide explains every Spring concept, annotation, and architectural decision
 src/main/java/com/innatour/toursmanager/
 ├── ToursManagerApplication.java    # Main entry point (REQUIRED)
 ├── config/                          # Configuration classes (OPTIONAL but recommended)
-│   └── OpenApiConfig.java
+│   ├── OpenApiConfig.java
+│   └── DataInitializer.java        # Seeds reference data on startup
 ├── controller/                      # REST API endpoints (REQUIRED for API)
 │   ├── GuideController.java
 │   └── HelloController.java
-├── dto/                            # Data Transfer Objects (OPTIONAL)
-│   └── ErrorResponse.java
+├── dto/                            # Data Transfer Objects (OPTIONAL but recommended)
+│   ├── ErrorResponse.java
+│   └── GuideDTO.java               # API compatibility layer
 ├── exception/                      # Error handling (OPTIONAL but recommended)
 │   └── GlobalExceptionHandler.java
 ├── model/                          # Database entities (REQUIRED for JPA)
-│   └── Guide.java
+│   ├── Guide.java                  # With @ManyToMany to Language
+│   └── Language.java               # Reference data (ISO 639-1 codes)
 ├── repository/                     # Database access (REQUIRED for JPA)
-│   └── GuideRepository.java
+│   ├── GuideRepository.java        # With custom queries
+│   └── LanguageRepository.java     # Language lookup methods
 └── service/                        # Business logic (OPTIONAL but best practice)
     └── GuideService.java
 
@@ -198,6 +203,50 @@ public class Guide {
 - Spring Boot can auto-create the table on startup (if configured)
 
 **REQUIRED**: Yes, for JPA entities.
+
+---
+
+#### @ManyToMany, @OneToMany, @ManyToOne, @OneToOne
+Define relationships between entities
+
+```java
+// Guide can speak many Languages, Language spoken by many Guides
+@ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+@JoinTable(
+    name = "guide_languages",           // Join table name
+    joinColumns = @JoinColumn(name = "guide_id"),
+    inverseJoinColumns = @JoinColumn(name = "language_id")
+)
+private Set<Language> languages = new HashSet<>();
+```
+
+**Relationship types:**
+- `@OneToOne` - 1:1 (e.g., User ↔ UserProfile)
+- `@OneToMany` / `@ManyToOne` - 1:N (e.g., Guide → Tours, Tour → Guide)
+- `@ManyToMany` - N:M (e.g., Guides ↔ Languages)
+
+**FetchType:**
+- `EAGER` - Load related entities immediately (use for always-needed data)
+- `LAZY` - Load only when accessed (better performance, but can cause LazyInitializationException)
+
+**CascadeType:**
+- `PERSIST` - Save related entities when parent is saved
+- `MERGE` - Update related entities when parent is updated
+- `REMOVE` - Delete related entities when parent is deleted (⚠️ be careful!)
+- `ALL` - All cascade operations (⚠️ use sparingly!)
+
+**When to use @ManyToMany:**
+- Both entities can exist independently
+- Many-to-many relationship in business logic
+- Need a join table to link them
+
+**Example in ToursManager:**
+- A Guide can speak many Languages
+- A Language can be spoken by many Guides
+- Join table `guide_languages` links them
+- Languages are reference data (shouldn't be deleted with Guide)
+
+**REQUIRED**: Yes, to define entity relationships.
 
 ---
 
