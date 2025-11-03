@@ -1,5 +1,58 @@
 # Code Organization for Future Mobile App
 
+## Backend Architecture Overview
+
+Understanding how Spring Boot layers work together:
+
+```
+┌─────────────────────────────────────┐
+│   SPRING BOOT APPLICATION           │
+│                                     │
+│  ┌───────────────────────────────┐ │
+│  │  CONTROLLER LAYER             │ │ ← @RestController
+│  │  (GuideController.java)       │ │   REST API endpoints
+│  └───────────────────────────────┘ │   Uses DTOs
+│              ↓                      │
+│  ┌───────────────────────────────┐ │
+│  │  SERVICE LAYER                │ │ ← @Service
+│  │  (GuideService.java)          │ │   Business logic
+│  └───────────────────────────────┘ │   Uses Entities
+│              ↓                      │
+│  ┌───────────────────────────────┐ │
+│  │  REPOSITORY LAYER             │ │ ← @Repository
+│  │  (GuideRepository.java)       │ │   Data access (interface)
+│  └───────────────────────────────┘ │
+│              ↓                      │
+│  ┌───────────────────────────────┐ │
+│  │  MODEL/ENTITY LAYER           │ │ ← @Entity classes
+│  │  (Guide.java, Language.java)  │ │   Defines data structure
+│  └───────────────────────────────┘ │
+│              ↓                      │
+│  ┌───────────────────────────────┐ │
+│  │  JPA/HIBERNATE (ORM)          │ │ ← Translates entities → SQL
+│  └───────────────────────────────┘ │
+│                                     │
+└─────────────────────────────────────┘
+              ↓ (JDBC connection)
+┌─────────────────────────────────────┐
+│   POSTGRESQL DATABASE               │ ← Outside Spring
+│   (separate process/container)      │   Stores actual data
+│   - guides table                    │
+│   - languages table                 │
+│   - guide_languages join table      │
+└─────────────────────────────────────┘
+```
+
+**Key Points:**
+- **Spring Boot ends at Model/Entity layer** (Java code)
+- **Database is external infrastructure** (PostgreSQL container)
+- **JPA/Hibernate generates SQL** from entity annotations
+- **JDBC provides network connection** to database (port 5432)
+
+---
+
+## Frontend Architecture
+
 ## ✅ What We Just Did
 
 Refactored the frontend code to prepare for future React Native mobile app:

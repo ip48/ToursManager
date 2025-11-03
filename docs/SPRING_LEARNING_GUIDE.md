@@ -467,6 +467,53 @@ public class GuideController {
 
 ## 4. Architecture: Layers Explained
 
+### The Complete Picture: Spring Boot & Database
+
+```
+┌─────────────────────────────────────┐
+│   SPRING BOOT APPLICATION           │
+│                                     │
+│  ┌───────────────────────────────┐ │
+│  │  CONTROLLER LAYER             │ │ ← @RestController
+│  │  (GuideController.java)       │ │   REST API endpoints
+│  └───────────────────────────────┘ │   Uses DTOs
+│              ↓                      │
+│  ┌───────────────────────────────┐ │
+│  │  SERVICE LAYER                │ │ ← @Service
+│  │  (GuideService.java)          │ │   Business logic
+│  └───────────────────────────────┘ │   Uses Entities
+│              ↓                      │
+│  ┌───────────────────────────────┐ │
+│  │  REPOSITORY LAYER             │ │ ← @Repository
+│  │  (GuideRepository.java)       │ │   Data access (interface)
+│  └───────────────────────────────┘ │
+│              ↓                      │
+│  ┌───────────────────────────────┐ │
+│  │  MODEL/ENTITY LAYER           │ │ ← @Entity classes
+│  │  (Guide.java, Language.java)  │ │   Defines data structure
+│  └───────────────────────────────┘ │
+│              ↓                      │
+│  ┌───────────────────────────────┐ │
+│  │  JPA/HIBERNATE (ORM)          │ │ ← Translates entities → SQL
+│  └───────────────────────────────┘ │
+│                                     │
+└─────────────────────────────────────┘
+              ↓ (JDBC connection)
+┌─────────────────────────────────────┐
+│   POSTGRESQL DATABASE               │ ← Outside Spring
+│   (separate process/container)      │   Stores actual data
+│   - guides table                    │
+│   - languages table                 │
+│   - guide_languages join table      │
+└─────────────────────────────────────┘
+```
+
+**Key Understanding:**
+- **Spring Boot ends at the Model layer** (Java code)
+- **Database is external** (separate PostgreSQL process)
+- **JPA/Hibernate bridges the gap** (generates SQL from your entities)
+- **JDBC provides the connection** (network connection to port 5432)
+
 ### The "Spring Layered Architecture"
 
 ```
@@ -1106,7 +1153,9 @@ public interface GuideRepository extends JpaRepository<Guide, Long> {
     List<Guide> findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(
             String firstName, String lastName);
     
-    List<Guide> findByLanguagesContainingIgnoreCase(String language);
+    // Efficient query using JOIN instead of LIKE
+    @Query("SELECT DISTINCT g FROM Guide g JOIN g.languages l WHERE LOWER(l.code) = LOWER(:languageCode)")
+    List<Guide> findByLanguageCode(@Param("languageCode") String languageCode);
 }
 ```
 
@@ -1180,13 +1229,45 @@ Optional<Guide> findByEmailNative(String email);
 
 ```java
 @Service
+@Transactional
 public class GuideService {
     
     private final GuideRepository guideRepository;
+    private final LanguageRepository languageRepository;
     
-    // Constructor injection
-    public GuideService(GuideRepository guideRepository) {
+    // Constructor injection (multiple dependencies)
+    public GuideService(GuideRepository guideRepository, LanguageRepository languageRepository) {
         this.guideRepository = guideRepository;
+        this.languageRepository = languageRepository;
+    }
+    
+    /**
+     * Convert comma-separated language codes to Set of Language entities
+     */
+    private Set<Language> convertLanguageCodesToEntities(String languageCodes) {
+        if (languageCodes == null || languageCodes.trim().isEmpty()) {
+            return new HashSet<>();
+        }
+        
+        Set<String> codes = Arrays.stream(languageCodes.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toSet());
+        
+        Set<Language> languages = languageRepository.findByCodeIn(codes);
+        
+        // Validate that all requested language codes exist
+        if (languages.size() != codes.size()) {
+            Set<String> foundCodes = languages.stream()
+                    .map(Language::getCode)
+                    .collect(Collectors.toSet());
+            Set<String> missingCodes = codes.stream()
+                    .filter(code -> !foundCodes.contains(code))
+                    .collect(Collectors.toSet());
+            throw new IllegalArgumentException("Invalid language codes: " + missingCodes);
+        }
+        
+        return languages;
     }
     
     public List<Guide> getAllGuides() {
@@ -1210,19 +1291,30 @@ public class GuideService {
                 searchTerm, searchTerm);
     }
     
-    public List<Guide> searchGuidesByLanguage(String language) {
-        return guideRepository.findByLanguagesContainingIgnoreCase(language);
+    public List<Guide> searchGuidesByLanguage(String languageCode) {
+        return guideRepository.findByLanguageCode(languageCode);
     }
     
-    public Guide createGuide(Guide guide) {
+    /**
+     * Create guide with language codes (comma-separated string)
+     */
+    public Guide createGuide(Guide guide, String languageCodes) {
         // Business rule: email must be unique
         if (guideRepository.findByEmail(guide.getEmail()).isPresent()) {
             throw new IllegalArgumentException("Email already exists: " + guide.getEmail());
         }
+        
+        // Convert language codes to entities
+        Set<Language> languages = convertLanguageCodesToEntities(languageCodes);
+        guide.setLanguages(languages);
+        
         return guideRepository.save(guide);
     }
     
-    public Guide updateGuide(Long id, Guide guideDetails) {
+    /**
+     * Update guide with language codes (comma-separated string)
+     */
+    public Guide updateGuide(Long id, Guide guideDetails, String languageCodes) {
         Guide guide = guideRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Guide not found with id: " + id));
         
@@ -1238,8 +1330,11 @@ public class GuideService {
         guide.setEmail(guideDetails.getEmail());
         guide.setPhoneNumber(guideDetails.getPhoneNumber());
         guide.setProfile(guideDetails.getProfile());
-        guide.setLanguages(guideDetails.getLanguages());
         guide.setActive(guideDetails.getActive());
+        
+        // Convert and set languages
+        Set<Language> languages = convertLanguageCodesToEntities(languageCodes);
+        guide.setLanguages(languages);
         
         return guideRepository.save(guide);
     }
@@ -1295,22 +1390,117 @@ public void transferGuide(Long fromId, Long toId) {
 - `@Service` - Yes (so Spring manages it)
 - Service layer itself - No, but best practice
 
+**Key Points:**
+- Service now has TWO dependencies (GuideRepository + LanguageRepository)
+- Service converts between API format (strings) and entity format (Set<Language>)
+- Validation logic ensures all language codes are valid
+- Clear separation: Service handles business logic, repositories handle database
+
 ---
 
-## 9. Controller Layer
+## 10. Controller Layer & DTOs
 
-See the GuideController in your project. Key points:
+### Data Transfer Objects (DTOs)
+
+DTOs convert between internal entity representation and external API format.
+
+**Why use DTOs?**
+- **API stability** - Change internal model without breaking API
+- **Security** - Don't expose internal fields (e.g., password hashes)
+- **Flexibility** - API format can differ from database structure
+- **Versioning** - Support multiple API versions
+
+**Example: GuideDTO**
+```java
+public class GuideDTO {
+    private Long id;
+    
+    @NotBlank
+    @Size(min = 2, max = 50)
+    private String firstName;
+    
+    private String languages;  // "en,es,fr" - comma-separated string
+    
+    /**
+     * Convert Guide entity to DTO (for API responses)
+     */
+    public static GuideDTO fromEntity(Guide guide) {
+        GuideDTO dto = new GuideDTO();
+        dto.setId(guide.getId());
+        dto.setFirstName(guide.getFirstName());
+        // ... other fields
+        
+        // Convert Set<Language> to comma-separated string
+        if (guide.getLanguages() != null && !guide.getLanguages().isEmpty()) {
+            String languageCodes = guide.getLanguages().stream()
+                    .map(Language::getCode)
+                    .collect(Collectors.joining(","));
+            dto.setLanguages(languageCodes);
+        }
+        
+        return dto;
+    }
+}
+```
+
+### GuideController with DTOs
+
+Key points about GuideController:
 
 **Job:**
 - Map HTTP requests to methods
-- Extract request data
+- Extract request data from DTOs
 - Call service layer
+- Convert entities to DTOs for response
 - Return HTTP responses
 
 **Does NOT contain:**
 - Database queries
 - Business logic
 - Complex validation
+- Entity ↔ DTO conversion logic (use static methods in DTO)
+
+**Example with DTOs:**
+```java
+@RestController
+@RequestMapping("/api/guides")
+public class GuideController {
+    private final GuideService guideService;
+    
+    @GetMapping
+    public ResponseEntity<List<GuideDTO>> getAllGuides() {
+        List<Guide> guides = guideService.getAllGuides();
+        
+        // Convert entities to DTOs
+        List<GuideDTO> guideDTOs = guides.stream()
+                .map(GuideDTO::fromEntity)
+                .toList();
+        
+        return ResponseEntity.ok(guideDTOs);
+    }
+    
+    @PostMapping
+    public ResponseEntity<GuideDTO> createGuide(@Valid @RequestBody GuideDTO guideDTO) {
+        // Build entity from DTO
+        Guide guide = new Guide();
+        guide.setFirstName(guideDTO.getFirstName());
+        guide.setLastName(guideDTO.getLastName());
+        // ... other fields
+        
+        // Create guide with language codes
+        Guide createdGuide = guideService.createGuide(guide, guideDTO.getLanguages());
+        
+        // Convert back to DTO for response
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(GuideDTO.fromEntity(createdGuide));
+    }
+}
+```
+
+**Benefits:**
+- Frontend always gets "en,es,fr" format (API stability)
+- Backend stores proper relational data (Set<Language>)
+- Easy to change internal model without breaking API
 
 **ResponseEntity:**
 ```java
@@ -1325,7 +1515,7 @@ return ResponseEntity.badRequest().body(error);     // 400 Bad Request
 
 ---
 
-## 10. Configuration Classes
+## 11. Configuration Classes
 
 ### OpenApiConfig.java
 
@@ -1347,11 +1537,45 @@ public class OpenApiConfig {
 **@Configuration** - Provides Spring beans
 **@Bean** - Method that returns an object for Spring to manage
 
-**Required:** No, but useful for customizing Spring Boot behavior.
+### DataInitializer.java (Reference Data)
+
+```java
+@Configuration
+public class DataInitializer {
+    
+    @Bean
+    CommandLineRunner initLanguages(LanguageRepository languageRepository) {
+        return args -> {
+            // Only initialize if the table is empty
+            if (languageRepository.count() == 0) {
+                languageRepository.save(new Language("en", "English"));
+                languageRepository.save(new Language("es", "Spanish"));
+                languageRepository.save(new Language("fr", "French"));
+                // ... 22 more languages
+                
+                System.out.println("✓ Initialized " + languageRepository.count() + " languages");
+            }
+        };
+    }
+}
+```
+
+**CommandLineRunner:**
+- Runs once when application starts
+- Perfect for seeding reference data
+- Only runs if table is empty (idempotent)
+
+**Use cases:**
+- Load ISO language codes
+- Load country codes
+- Load currency codes
+- Any reference data that rarely changes
+
+**Required:** No, but useful for customizing Spring Boot behavior and seeding data.
 
 ---
 
-## 11. Exception Handling
+## 12. Exception Handling
 
 ### GlobalExceptionHandler.java
 
@@ -1413,7 +1637,7 @@ public class GlobalExceptionHandler {
 
 ---
 
-## 12. What's Required vs Optional
+## 13. What's Required vs Optional
 
 ### Must Have (App won't work without these)
 
@@ -1443,10 +1667,11 @@ public class GlobalExceptionHandler {
 - Service layer (`@Service`)
 - Repository interface (`@Repository`)
 - Separate DTO classes
+- Entity relationships (`@ManyToMany`, etc.)
 
 **Validation:**
 - `@Valid` in controllers
-- Validation annotations in entities
+- Validation annotations in entities/DTOs
 
 **Error Handling:**
 - `@RestControllerAdvice`
@@ -1455,6 +1680,10 @@ public class GlobalExceptionHandler {
 **Documentation:**
 - OpenAPI annotations
 - JavaDoc comments
+
+**Data Management:**
+- DTOs for API stability
+- Reference data initialization
 
 ### Nice to Have (Optional enhancements)
 
@@ -1479,12 +1708,16 @@ public class GlobalExceptionHandler {
 2. Validation annotations (@NotBlank, @Email, @Size)
 3. Repository method naming conventions
 4. Request mapping (@GetMapping, @PostMapping, @PathVariable, @RequestBody)
+5. DTOs and entity conversion
 
 **Level 3 - Advanced:**
-1. @Transactional for complex operations
-2. Custom queries with @Query
-3. Exception handling with @RestControllerAdvice
-4. Configuration with @Configuration and @Bean
+1. Entity relationships (@ManyToMany, @OneToMany, etc.)
+2. FetchType and CascadeType decisions
+3. @Transactional for complex operations
+4. Custom queries with @Query
+5. Exception handling with @RestControllerAdvice
+6. Configuration with @Configuration and @Bean
+7. Reference data initialization
 
 ---
 
