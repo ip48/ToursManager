@@ -1,7 +1,9 @@
 package com.innatour.toursmanager.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.innatour.toursmanager.model.Guide;
 import com.innatour.toursmanager.model.Language;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -15,6 +17,8 @@ import java.util.stream.Collectors;
  */
 public class GuideDTO {
     
+    @Schema(description = "Guide ID (read-only, auto-generated)", accessMode = Schema.AccessMode.READ_ONLY)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private Long id;
     
     @NotBlank(message = "First name is required")
@@ -35,9 +39,18 @@ public class GuideDTO {
     @Size(max = 500, message = "Profile cannot exceed 500 characters")
     private String profile;
     
+    @Schema(description = "Comma-separated language codes (ISO 639-1)", example = "en,es,fr")
     private String languages; // Comma-separated language codes (e.g., "en,es,fr")
+    
+    @Schema(description = "Active status", example = "true")
     private Boolean active;
+    
+    @Schema(description = "Creation timestamp (read-only)", accessMode = Schema.AccessMode.READ_ONLY)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private LocalDateTime createdAt;
+    
+    @Schema(description = "Last update timestamp (read-only)", accessMode = Schema.AccessMode.READ_ONLY)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private LocalDateTime updatedAt;
     
     // Constructors

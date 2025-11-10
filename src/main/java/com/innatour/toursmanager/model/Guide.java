@@ -31,6 +31,11 @@ public class Guide {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
     
+    // Password can be null for existing guides (before authentication was added)
+    // New registrations via /api/auth/register will require password
+    @Column(nullable = true)  // Allow null for existing data
+    private String password; // BCrypt hashed password
+    
     @Size(max = 20, message = "Phone number cannot exceed 20 characters")
     @Column(length = 20)
     private String phoneNumber;
@@ -108,6 +113,14 @@ public class Guide {
     
     public void setEmail(String email) {
         this.email = email;
+    }
+    
+    public String getPassword() {
+        return password;
+    }
+    
+    public void setPassword(String password) {
+        this.password = password;
     }
     
     public String getPhoneNumber() {

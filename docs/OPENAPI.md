@@ -8,7 +8,7 @@ Added Springdoc OpenAPI to automatically generate API documentation from your Sp
 
 ### 1. Interactive API Documentation UI
 Once the backend is running, visit:
-- **Swagger UI**: http://localhost:8080/swagger-ui.html
+- **Swagger UI**: http://localhost:8080/swagger-ui/index.html (or http://localhost:8080/swagger-ui.html)
   - Interactive web interface to test API endpoints
   - Try requests directly from your browser
   - See request/response examples
@@ -67,7 +67,7 @@ mvn spring-boot:run
 ```
 
 ### Visit Swagger UI
-Open in browser: http://localhost:8080/swagger-ui.html
+Open in browser: http://localhost:8080/swagger-ui/index.html
 
 You'll see:
 - All your API endpoints organized by tags

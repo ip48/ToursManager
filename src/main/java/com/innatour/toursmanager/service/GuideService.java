@@ -120,6 +120,34 @@ public class GuideService {
         return guideRepository.save(guide);
     }
     
+    /**
+     * Update guide by email (for guides editing their own profile)
+     */
+    public Guide updateGuideByEmail(String email, Guide guideDetails, String languageCodes) {
+        Guide guide = guideRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Guide not found with email: " + email));
+        
+        // Check if email is being changed and if new email already exists
+        if (!guide.getEmail().equals(guideDetails.getEmail())) {
+            if (guideRepository.findByEmail(guideDetails.getEmail()).isPresent()) {
+                throw new IllegalArgumentException("Email already exists: " + guideDetails.getEmail());
+            }
+        }
+        
+        guide.setFirstName(guideDetails.getFirstName());
+        guide.setLastName(guideDetails.getLastName());
+        guide.setEmail(guideDetails.getEmail());
+        guide.setPhoneNumber(guideDetails.getPhoneNumber());
+        guide.setProfile(guideDetails.getProfile());
+        guide.setActive(guideDetails.getActive());
+        
+        // Convert and set languages
+        Set<Language> languages = convertLanguageCodesToEntities(languageCodes);
+        guide.setLanguages(languages);
+        
+        return guideRepository.save(guide);
+    }
+    
     public void deleteGuide(Long id) {
         Guide guide = guideRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Guide not found with id: " + id));
@@ -138,5 +166,45 @@ public class GuideService {
                 .orElseThrow(() -> new IllegalArgumentException("Guide not found with id: " + id));
         guide.setActive(true);
         guideRepository.save(guide);
+    }
+    
+    /**
+     * Partial update - only updates fields that are not null
+     */
+    public Guide partialUpdateGuideByEmail(String email, String firstName, String lastName, 
+                                          String newEmail, String phoneNumber, String profile,
+                                          String languageCodes, Boolean active) {
+        Guide guide = guideRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Guide not found with email: " + email));
+        
+        // Only update non-null fields
+        if (firstName != null) {
+            guide.setFirstName(firstName);
+        }
+        if (lastName != null) {
+            guide.setLastName(lastName);
+        }
+        if (newEmail != null && !newEmail.equals(email)) {
+            // Check if new email already exists
+            if (guideRepository.findByEmail(newEmail).isPresent()) {
+                throw new IllegalArgumentException("Email already exists: " + newEmail);
+            }
+            guide.setEmail(newEmail);
+        }
+        if (phoneNumber != null) {
+            guide.setPhoneNumber(phoneNumber);
+        }
+        if (profile != null) {
+            guide.setProfile(profile);
+        }
+        if (languageCodes != null) {
+            Set<Language> languages = convertLanguageCodesToEntities(languageCodes);
+            guide.setLanguages(languages);
+        }
+        if (active != null) {
+            guide.setActive(active);
+        }
+        
+        return guideRepository.save(guide);
     }
 }

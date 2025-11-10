@@ -120,3 +120,107 @@ export const searchGuidesByLanguage = async (language: string): Promise<ApiRespo
     return { error: 'Network error', status: 0 };
   }
 };
+
+/**
+ * Get current user's profile (authenticated)
+ */
+export const getMyProfile = async (token: string): Promise<ApiResponse<Guide>> => {
+  try {
+    const response = await fetch(`${API_ENDPOINTS.GUIDES}/profile`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      return { data, status: response.status };
+    } else {
+      return { error: 'Failed to fetch profile', status: response.status };
+    }
+  } catch {
+    return { error: 'Network error', status: 0 };
+  }
+};
+
+/**
+ * Partially update current user's profile (authenticated)
+ * Only send fields you want to change
+ */
+export const patchMyProfile = async (
+  token: string, 
+  updates: Partial<GuideFormData>
+): Promise<ApiResponse<Guide>> => {
+  try {
+    const response = await fetch(`${API_ENDPOINTS.GUIDES}/profile`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(updates),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return { data, status: response.status };
+    } else {
+      try {
+        const errorData = await response.json();
+        return { 
+          error: errorData.message || 'Failed to update profile',
+          fieldErrors: errorData.errors,
+          status: response.status 
+        };
+      } catch {
+        return { error: 'Failed to update profile', status: response.status };
+      }
+    }
+  } catch {
+    return { 
+      error: 'Network error. Please make sure the backend is running.', 
+      status: 0 
+    };
+  }
+};
+
+/**
+ * Fully replace current user's profile (authenticated)
+ * Must send all fields
+ */
+export const updateMyProfile = async (
+  token: string, 
+  guideData: GuideFormData
+): Promise<ApiResponse<Guide>> => {
+  try {
+    const response = await fetch(`${API_ENDPOINTS.GUIDES}/profile`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(guideData),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return { data, status: response.status };
+    } else {
+      try {
+        const errorData = await response.json();
+        return { 
+          error: errorData.message || 'Failed to update profile',
+          fieldErrors: errorData.errors,
+          status: response.status 
+        };
+      } catch {
+        return { error: 'Failed to update profile', status: response.status };
+      }
+    }
+  } catch {
+    return { 
+      error: 'Network error. Please make sure the backend is running.', 
+      status: 0 
+    };
+  }
+};

@@ -1,0 +1,29 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "dotnet-api", "dotnet-api", "{F32DA15D-601A-F58A-F67C-D7D0F33DA689}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ToursManager.Api", "dotnet-api\ToursManager.Api\ToursManager.Api.csproj", "{A5A302B2-A1AC-3CC3-4EA5-ADFB36575CCA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A5A302B2-A1AC-3CC3-4EA5-ADFB36575CCA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A5A302B2-A1AC-3CC3-4EA5-ADFB36575CCA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A5A302B2-A1AC-3CC3-4EA5-ADFB36575CCA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A5A302B2-A1AC-3CC3-4EA5-ADFB36575CCA}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{A5A302B2-A1AC-3CC3-4EA5-ADFB36575CCA} = {F32DA15D-601A-F58A-F67C-D7D0F33DA689}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C44415BE-8F65-4B71-A9EB-DB9C5858565B}
+	EndGlobalSection
+EndGlobal

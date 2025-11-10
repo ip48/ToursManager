@@ -100,6 +100,29 @@
       "problemMatcher": []
     },
     {
+      "label": "Restart Spring Boot",
+      "type": "shell",
+      "command": "pkill -f 'spring-boot:run' || true; sleep 2 && set -a && source .env && set +a && mvn spring-boot:run",
+      "group": "none",
+      "problemMatcher": [],
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Stop Spring Boot",
+      "type": "shell",
+      "command": "pkill -f 'spring-boot:run' || true",
+      "group": "none",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      }
+    },
+    {
       "label": "Stop All Services",
       "type": "shell",
       "command": "(docker compose down || docker-compose down) && pkill -f 'vite' && pkill -f 'spring-boot:run' || true",
